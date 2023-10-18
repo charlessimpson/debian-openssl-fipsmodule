@@ -154,6 +154,57 @@ Confirm that `TLS_CHACHA20_POLY1305_SHA256` is unavailable:
 False
 ```
 
+### Ruby
+
+Sample Dockerfile:
+```dockerfile
+FROM ruby:3.2-bookworm
+
+ARG OPENSSL_MODULES=/usr/lib/x86_64-linux-gnu/ossl-modules
+
+COPY --from=debian-openssl-fipsmodule:3.0.8 $OPENSSL_MODULES/fips.so $OPENSSL_MODULES/fips.so
+RUN openssl fipsinstall -module $OPENSSL_MODULES/fips.so -out /usr/lib/ssl/fipsmodule.cnf
+COPY --from=debian-openssl-fipsmodule:3.0.8 /etc/ssl/openssl.cnf /etc/ssl/openssl.cnf
+```
+
+Ruby 3.2 uses Ruby/OpenSSL 3.1.0, which doesn't support the concept of FIPS providers ([added](https://github.com/ruby/openssl/commit/c5b2bc1268bcb946ff2eb52904a85278a1dac12c)
+in Ruby/OpenSSL 3.2.0). As a result `OpenSSL.fips` doesn't work.
+
+Confirm that SHA256 is available through OpenSSL's digest:
+```
+irb(main):002:0> OpenSSL::Digest::SHA256.new
+=> #<OpenSSL::Digest::SHA256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855>
+```
+
+Confirm that MD5 is unavailable throught OpenSSL's digest:
+```
+irb(main):001:0> require "openssl"
+=> true
+irb(main):002:0> OpenSSL::Digest::MD5.new
+/usr/local/lib/ruby/3.2.0/openssl/digest.rb:35:in `initialize': Digest initialization failed: initialization error (OpenSSL::Digest::DigestError)
+	from /usr/local/lib/ruby/3.2.0/openssl/digest.rb:35:in `block (3 levels) in <class:Digest>'
+	from (irb):2:in `new'
+	from (irb):2:in `<main>'
+	from /usr/local/lib/ruby/gems/3.2.0/gems/irb-1.6.2/exe/irb:11:in `<top (required)>'
+	from /usr/local/bin/irb:25:in `load'
+	from /usr/local/bin/irb:25:in `<main>'
+```
+Ruby's `Digest` also doesn't use OpenSSL (it contains its own [C implementation](https://github.com/ruby/ruby/tree/e51014f9c05aa65cbf203442d37fef7c12390015/ext/digest)
+), so `Digest::MD5` will continue to work.
+
+Confirm that `TLS_AES_256_GCM_SHA384` is available, but
+`TLS_CHACHA20_POLY1305_SHA256` is unavailable:
+```
+irb(main):001:0> require "openssl"
+=> true
+irb(main):002:0> ctx = OpenSSL::SSL::SSLContext.new
+=> #<OpenSSL::SSL::SSLContext:0x00007ffb5d296430 @verify_hostname=false, @verify_mode=0>
+irb(main):003:0> ctx.ciphers.any? { |name, version, bits, alg_bits| name == "TLS_AES_256_GCM_SHA384" }
+=> true
+irb(main):004:0> ctx.ciphers.any? { |name, version, bits, alg_bits| name == "TLS_CHACHA20_POLY1305_SHA256" }
+=> false
+```
+
 ### Apache httpd
 
 Create a custom `httpd.conf` file, ensure that it contains `SSLFIPS on`.
