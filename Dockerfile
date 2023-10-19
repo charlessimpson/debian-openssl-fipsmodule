@@ -1,27 +1,27 @@
 FROM debian:bookworm-slim
 
 RUN set -eux; \
-	apt-get update; \
-	apt-get install -y --no-install-recommends openssl; \
-	rm -rf /var/lib/apt/lists/*
+    apt-get update; \
+    apt-get install -y --no-install-recommends openssl; \
+    rm -rf /var/lib/apt/lists/*
 
 ENV OPENSSL_VERSION 3.0.8
 ENV OPENSSL_SHA256 6c13d2bf38fdf31eac3ce2a347073673f5d63263398f1f69d0df4a41253e4b3e
 
 RUN set -eux; \
-	\
-	savedAptMark="$(apt-mark showmanual)"; \
-	apt-get update; \
-	apt-get install -y --no-install-recommends \
+    \
+    savedAptMark="$(apt-mark showmanual)"; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
         ca-certificates \
         dpkg-dev \
         gcc \
-		gnupg \
+        gnupg \
         libfindbin-libs-perl \
         libc6-dev \
         make \
         wget \
-	; \
+    ; \
     rm -r /var/lib/apt/lists/*; \
     \
     wget -O openssl.tar.gz https://www.openssl.org/source/openssl-$OPENSSL_VERSION.tar.gz; \
@@ -40,17 +40,17 @@ RUN set -eux; \
         # Tomas Mraz
         EFC0A467D613CB83C7ED6D30D894E2CE8B3D79F5 \
         # openssl-omc@openssl.org
-	; do \
-		gpg --batch --keyserver hkps://keys.openpgp.org --recv-keys "$key"; \
-	done; \
-	gpg --batch --verify openssl.tar.gz.asc openssl.tar.gz; \
-	gpgconf --kill all; \
-	rm -rf "$GNUPGHOME" openssl.tar.gz.asc; \
-	\
+    ; do \
+        gpg --batch --keyserver hkps://keys.openpgp.org --recv-keys "$key"; \
+    done; \
+    gpg --batch --verify openssl.tar.gz.asc openssl.tar.gz; \
+    gpgconf --kill all; \
+    rm -rf "$GNUPGHOME" openssl.tar.gz.asc; \
+    \
     mkdir -p src; \
-	tar -xf openssl.tar.gz -C src --strip-components=1; \
-	rm openssl.tar.gz; \
-	cd src; \
+    tar -xf openssl.tar.gz -C src --strip-components=1; \
+    rm openssl.tar.gz; \
+    cd src; \
     \
     DEB_ARCH=$(dpkg-architecture --query DEB_BUILD_GNU_TYPE); \
     ./Configure \
@@ -65,8 +65,8 @@ RUN set -eux; \
     cd ..; \
     rm -rf src; \
     \
-	apt-mark auto '.*' > /dev/null; \
-	[ -z "$savedAptMark" ] || apt-mark manual $savedAptMark; \
+    apt-mark auto '.*' > /dev/null; \
+    [ -z "$savedAptMark" ] || apt-mark manual $savedAptMark; \
     apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false; \
     \
     sed -ri \
